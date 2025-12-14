@@ -1,0 +1,19 @@
+# Dependencies and build output
+node_modules/
+dist/
+.parcel-cache/
+.yarn/
+.pnp.*
+
+# Environment files
+.env
+.env.*
+
+# Editor and OS noise
+.DS_Store
+.vscode/
+.idea/
+
+# Misc tooling caches
+.eslintcache
+*.log
