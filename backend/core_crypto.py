@@ -71,9 +71,10 @@ def _load_cv_gray(image_bytes: bytes) -> np.ndarray:
 
 def robust_stack(img_share_a_bytes: bytes, img_share_b_bytes: bytes) -> Tuple[Image.Image, Image.Image]:
     """
-    Align share A to share B (ORB + homography when possible), then stack via XOR.
-    Returns (stacked_pil, aligned_share_a_pil). Falls back to no-warp stacking
-    if alignment cannot be computed.
+    Align share A to share B. Tries two strategies:
+    1. Direct stacking (assuming digital upload/perfect alignment).
+    2. ORB + Homography alignment (for scans/photos).
+    Returns the best result (stacked_pil, aligned_share_a_pil).
     """
     share_a_gray = _load_cv_gray(img_share_a_bytes)
     share_b_gray = _load_cv_gray(img_share_b_bytes)
@@ -84,6 +85,33 @@ def robust_stack(img_share_a_bytes: bytes, img_share_b_bytes: bytes) -> Tuple[Im
     if share_a_gray.shape[0] > share_b_gray.shape[0]:
         share_a_gray = share_a_gray[: share_b_gray.shape[0], : share_b_gray.shape[1]]
 
+    def process_pair(img_a, img_b):
+        # Resize if needed (safety)
+        if img_a.shape != img_b.shape:
+             try:
+                img_a = cv2.resize(img_a, (img_b.shape[1], img_b.shape[0]))
+             except Exception:
+                return Image.new("L", (1, 1)), Image.new("L", (1, 1))
+        
+        _, bin_a = cv2.threshold(img_a, 128, 255, cv2.THRESH_BINARY)
+        _, bin_b = cv2.threshold(img_b, 128, 255, cv2.THRESH_BINARY)
+        stacked = cv2.bitwise_not(cv2.bitwise_xor(bin_a, bin_b))
+        
+        # Downsample
+        h, w = stacked.shape
+        downsampled = stacked
+        if h % 2 == 0 and w % 2 == 0:
+            downsampled = cv2.resize(stacked, (w // 2, h // 2), interpolation=cv2.INTER_NEAREST)
+            
+        return Image.fromarray(downsampled), Image.fromarray(bin_a)
+
+    # Strategy 1: Direct Stacking (Fast path for digital uploads)
+    # This avoids ORB noise if the user just uploaded the file they downloaded.
+    direct_stacked, direct_aligned = process_pair(share_a_gray, share_b_gray)
+    if decode_qr_from_image(direct_stacked):
+        return direct_stacked, direct_aligned
+
+    # Strategy 2: ORB Alignment (Robust path for scans/photos)
     aligned_a = share_a_gray
     try:
         orb = cv2.ORB_create(2000)
@@ -105,28 +133,12 @@ def robust_stack(img_share_a_bytes: bytes, img_share_b_bytes: bytes) -> Tuple[Im
                         share_a_gray, H, (w, h), flags=cv2.INTER_NEAREST
                     )
     except Exception:
-        # fall back to no-warp alignment
-        aligned_a = share_a_gray
+        pass # Fallback to original if alignment fails
 
-    _, bin_a = cv2.threshold(aligned_a, 128, 255, cv2.THRESH_BINARY)
-    _, bin_b = cv2.threshold(share_b_gray, 128, 255, cv2.THRESH_BINARY)
-
-    # XOR + invert so identical subpixels (white QR) become white, complementary
-    # subpixels (black QR) become black.
-    stacked = cv2.bitwise_not(cv2.bitwise_xor(bin_a, bin_b))
-
-    # Collapse 2x2 subpixels back to the original QR grid with nearest-neighbor
-    # to preserve crisp module boundaries.
-    h, w = stacked.shape
-    downsampled = stacked
-    if h % 2 == 0 and w % 2 == 0:
-        downsampled = cv2.resize(
-            stacked, (w // 2, h // 2), interpolation=cv2.INTER_NEAREST
-        )
-
-    aligned_pil = Image.fromarray(bin_a)
-    stacked_pil = Image.fromarray(downsampled)
-    return stacked_pil, aligned_pil
+    aligned_stacked, aligned_img_pil = process_pair(aligned_a, share_b_gray)
+    
+    # Return the aligned result (even if it fails to decode, it's our best bet for debug)
+    return aligned_stacked, aligned_img_pil
 
 
 def decode_qr_from_image(img: Image.Image) -> str:

@@ -55,10 +55,13 @@ class TicketCreateResponse(BaseModel):
 
 class TicketVerifyResponse(BaseModel):
     valid: bool
-    original_data: Optional[str]
-    debug_image: str
-    aligned_share_a: str
+    original_data: Optional[str] = None
+    debug_image: Optional[str] = None
+    aligned_share_a: Optional[str] = None
     status: str
+    message: Optional[str] = None
+    decoded_payload: Optional[dict] = None
+    confidence: Optional[float] = 0.0
 
 
 @app.on_event("startup")
@@ -104,16 +107,18 @@ def _verify_payload(payload: str) -> tuple[bool, Optional[str], Optional[dict]]:
     if not compare_digest(expected_sig, sig):
         return False, "Signature mismatch", None
 
-    now = int(time.time())
-    if exp < now:
-        return False, "Ticket expired", None
-    return True, None, {
+    parsed = {
         "name": name,
         "email": email,
         "user_uuid": user_uuid,
         "check_in_code": check_in_code,
         "exp": exp,
     }
+
+    now = int(time.time())
+    if exp < now:
+        return False, "Ticket expired (payload)", parsed
+    return True, None, parsed
 
 
 def _generate_check_in_code(session) -> str:
@@ -264,8 +269,82 @@ async def verify_ticket(check_in_code: Optional[str] = Form(None), file: UploadF
     if ticket is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
+    _verify_attempts[code_used] = now_ts
+    share_b_bytes = ticket.share_b_blob
+    
+    # Default values
+    valid = False
+    message = "Verification failed"
+    decoded_payload = None
+    original_data = None
+    stacked_b64 = None
+    aligned_b64 = None
+    status = ticket.status
+
+    # 1. Stack Images
+    try:
+        stacked_img, aligned_img = robust_stack(share_a_bytes, share_b_bytes)
+        stacked_b64 = image_to_base64(stacked_img)
+        aligned_b64 = image_to_base64(aligned_img)
+    except Exception as exc:
+        return TicketVerifyResponse(
+            valid=False,
+            status=status,
+            message=f"Image alignment failed: {str(exc)}",
+            debug_image=None,
+            aligned_share_a=None
+        )
+
+    # 2. Decode QR
+    decoded_data = decode_qr_from_image(stacked_img)
+    original_data = decoded_data
+
+    if not decoded_data:
+        return TicketVerifyResponse(
+            valid=False,
+            status=status,
+            message="Could not decode QR code from stacked image",
+            debug_image=stacked_b64,
+            aligned_share_a=aligned_b64
+        )
+
+    # 3. Verify Payload Signature
+    sig_ok, err_msg, parsed = _verify_payload(decoded_data)
+    decoded_payload = parsed
+    
+    if not sig_ok:
+        return TicketVerifyResponse(
+            valid=False,
+            status=status,
+            message=f"Invalid signature: {err_msg}",
+            debug_image=stacked_b64,
+            aligned_share_a=aligned_b64,
+            original_data=original_data,
+            decoded_payload=decoded_payload
+        )
+
+    if parsed and parsed["check_in_code"] != ticket.check_in_code:
+        return TicketVerifyResponse(
+            valid=False,
+            status=status,
+            message="Check-in code mismatch in payload",
+            debug_image=stacked_b64,
+            aligned_share_a=aligned_b64,
+            original_data=original_data,
+            decoded_payload=decoded_payload
+        )
+
+    # 4. Check Ticket Status (Redeemed/Expired)
     if ticket.status == "redeemed":
-        raise HTTPException(status_code=400, detail="Ticket already redeemed")
+        return TicketVerifyResponse(
+            valid=False,
+            status="redeemed",
+            message="Ticket has already been redeemed",
+            debug_image=stacked_b64,
+            aligned_share_a=aligned_b64,
+            original_data=original_data,
+            decoded_payload=decoded_payload
+        )
 
     if ticket.expires_at:
         try:
@@ -277,37 +356,31 @@ async def verify_ticket(check_in_code: Optional[str] = Form(None), file: UploadF
             with get_session() as session:
                 session.merge(ticket)
                 session.commit()
-            raise HTTPException(status_code=400, detail="Ticket expired")
+            return TicketVerifyResponse(
+                valid=False,
+                status="expired",
+                message="Ticket has expired",
+                debug_image=stacked_b64,
+                aligned_share_a=aligned_b64,
+                original_data=original_data,
+                decoded_payload=decoded_payload
+            )
 
-    _verify_attempts[code_used] = now_ts
-    share_b_bytes = ticket.share_b_blob
-
-    try:
-        stacked_img, aligned_img = robust_stack(share_a_bytes, share_b_bytes)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    decoded_data = decode_qr_from_image(stacked_img)
-    valid = bool(decoded_data)
-    status = ticket.status
-
-    if decoded_data:
-        sig_ok, err_msg, parsed = _verify_payload(decoded_data)
-        if not sig_ok:
-            raise HTTPException(status_code=400, detail=err_msg or "Invalid payload")
-        if parsed and parsed["check_in_code"] != ticket.check_in_code:
-            raise HTTPException(status_code=400, detail="Check-in code mismatch")
-        status = "redeemed"
-        ticket.status = "redeemed"
-        ticket.redeemed_at = datetime.utcfromtimestamp(now_ts)
-        with get_session() as session:
-            session.merge(ticket)
-            session.commit()
+    # 5. Success
+    status = "redeemed"
+    ticket.status = "redeemed"
+    ticket.redeemed_at = datetime.utcfromtimestamp(now_ts)
+    with get_session() as session:
+        session.merge(ticket)
+        session.commit()
 
     return TicketVerifyResponse(
-        valid=valid,
-        original_data=decoded_data if decoded_data else None,
-        debug_image=image_to_base64(stacked_img),
-        aligned_share_a=image_to_base64(aligned_img),
+        valid=True,
+        original_data=decoded_data,
+        debug_image=stacked_b64,
+        aligned_share_a=aligned_b64,
         status=status,
+        message="Ticket is valid and authentic",
+        decoded_payload=decoded_payload,
+        confidence=1.0
     )

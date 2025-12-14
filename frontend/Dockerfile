@@ -10,7 +10,6 @@ ENV VITE_API_BASE=${VITE_API_BASE}
 COPY package.json bun.lockb* ./
 RUN bun install
 
-# Dev mode with hot reload
 COPY . .
 EXPOSE 5173
 CMD ["bun", "run", "dev"]

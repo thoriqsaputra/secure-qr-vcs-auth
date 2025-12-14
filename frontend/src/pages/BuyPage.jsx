@@ -1,13 +1,14 @@
 import { useState } from "react";
 import axios from "axios";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import Input from "../components/ui/Input";
 
 const API_BASE =
   (import.meta.env.VITE_API_BASE && import.meta.env.VITE_API_BASE.trim()) ||
   (typeof window !== "undefined"
     ? `${window.location.protocol}//${window.location.hostname}:8000`
     : "http://localhost:8000");
-
-const pill = "px-3 py-1 rounded-full text-xs font-semibold";
 
 const BuyPage = () => {
   const [name, setName] = useState("");
@@ -50,91 +51,112 @@ const BuyPage = () => {
   };
 
   return (
-    <>
-      <div className="p-6">
-        <form className="grid gap-4 md:grid-cols-2" onSubmit={submitCreate}>
-          <div className="space-y-3">
-            <label className="block">
-              <span className="text-xs uppercase tracking-wide text-slate-300">Name</span>
-              <input
-                required
-                className="mt-1 w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+    <div className="max-w-5xl mx-auto space-y-12 animate-fade-in">
+      <div className="text-center space-y-4">
+        <h1 className="text-4xl font-bold text-text-main">Issue New Ticket</h1>
+        <p className="text-text-muted max-w-xl mx-auto">
+          Generate a secure visual cryptography share for a new user. The system will split the secret into two shares.
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-8 items-start">
+        <Card className="h-fit border-slate-700/50 bg-surface/50">
+          <form onSubmit={submitCreate} className="space-y-6">
+            <div className="space-y-4">
+              <Input
+                label="Full Name"
+                placeholder="e.g. Alice Johnson"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ariana Neural"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs uppercase tracking-wide text-slate-300">Email</span>
-              <input
-                type="email"
                 required
-                className="mt-1 w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+              <Input
+                label="Email Address"
+                type="email"
+                placeholder="alice@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                required
               />
-            </label>
-            <button
-              type="submit"
+            </div>
+
+            {error && (
+              <div className="p-4 rounded-lg bg-danger/10 border border-danger/20 text-danger text-sm flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {error}
+              </div>
+            )}
+
+            <Button 
+              type="submit" 
+              className="w-full" 
               disabled={creating}
-              className="w-full rounded-lg bg-emerald-500 text-slate-950 font-semibold py-2 shadow-lg shadow-emerald-900/40 disabled:opacity-60"
+              size="lg"
             >
-              {creating ? "Generating..." : "Generate Ticket"}
-            </button>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Each ticket is encoded as a QR, expanded into two visual shares. Keep <strong>Share B</strong> server-side;
-              users only receive <strong>Share A</strong>.
-            </p>
-            {payload && (
-              <div className="flex flex-wrap gap-2">
-                <div className={`${pill} bg-emerald-700/40 border border-emerald-500/40`}>
-                  Code: {checkInCode}
+              {creating ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Generating Keys...
+                </span>
+              ) : "Generate Ticket"}
+            </Button>
+          </form>
+        </Card>
+
+        <div className="space-y-6">
+          {shareA ? (
+            <div className="space-y-6 animate-slide-up">
+              <Card className="bg-surface border-primary/20 shadow-lg shadow-primary/5">
+                <div className="text-center space-y-6">
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-semibold text-text-main">Ticket Generated Successfully</h3>
+                    <p className="text-sm text-text-muted">
+                      Share A has been created. Share B is stored securely on the server.
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-white rounded-xl inline-block shadow-inner">
+                    <img 
+                      src={`data:image/png;base64,${shareA}`} 
+                      alt="Share A" 
+                      className="w-48 h-48 object-contain"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <Button onClick={downloadShareA} variant="primary" className="w-full">
+                      Download Share A
+                    </Button>
+                    <p className="text-xs text-text-muted">
+                      Please save this image. It is required for verification.
+                    </p>
+                  </div>
                 </div>
-                <div className={`${pill} bg-slate-800 border border-slate-700`}>UUID: {userUuid}</div>
-              </div>
-            )}
-          </div>
-          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
-            {shareA ? (
-              <div className="space-y-3">
-                <p className="text-sm font-semibold text-emerald-300">Public Share A (Give to user)</p>
-                <img
-                  className="w-full rounded-lg bg-white p-4"
-                  src={`data:image/png;base64,${shareA}`}
-                  alt="Share A"
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={downloadShareA}
-                    className="flex-1 rounded-lg bg-slate-800 text-slate-100 border border-slate-700 py-2 text-sm font-semibold hover:bg-slate-700"
-                  >
-                    Download PNG
-                  </button>
+              </Card>
+            </div>
+          ) : (
+            <div className="h-full flex items-center justify-center p-12 border-2 border-dashed border-slate-800 rounded-2xl text-center">
+              <div className="space-y-4 max-w-xs">
+                <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mx-auto text-slate-600">
+                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  </svg>
                 </div>
-                <div className="text-xs text-slate-400">
-                  Check-in code: <span className="font-mono text-emerald-200">{checkInCode}</span>
-                  <br />
-                  UUID: <span className="font-mono text-slate-300">{userUuid}</span>
-                  <br />
-                  Payload: <span className="font-mono break-all">{payload}</span>
-                </div>
+                <h3 className="text-lg font-medium text-text-muted">No Ticket Generated</h3>
+                <p className="text-sm text-slate-600">
+                  Fill out the form to generate a new secure ticket and visual share.
+                </p>
               </div>
-            ) : (
-              <div className="h-full flex items-center justify-center text-slate-500 text-sm">
-                Generated ticket will appear here.
-              </div>
-            )}
-          </div>
-        </form>
-        {error && (
-          <div className="mt-4 text-sm text-red-300 bg-red-900/30 border border-red-700/40 rounded-lg p-3">
-            {error}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
-    </>
+    </div>
   );
 };
 
