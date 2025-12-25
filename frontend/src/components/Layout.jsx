@@ -23,10 +23,7 @@ const Layout = ({ children }) => {
         <div className="container-custom text-center md:text-left md:flex justify-between items-center">
           <div>
             <p className="text-sm text-text-muted">
-              &copy; {new Date().getFullYear()} SecureVCS. All rights reserved.
-            </p>
-            <p className="text-xs text-slate-600 mt-1">
-              Powered by Visual Cryptography & OpenCV Homography
+              &copy; {new Date().getFullYear()} Thoriq 13522141. All rights reserved.
             </p>
           </div>
           <div className="flex gap-6 mt-4 md:mt-0 text-sm text-text-muted">

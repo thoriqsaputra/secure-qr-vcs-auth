@@ -7,7 +7,7 @@ ARG VITE_API_BASE="http://localhost:8000"
 ENV VITE_API_BASE=${VITE_API_BASE}
 
 # Install deps
-COPY package.json bun.lockb* ./
+COPY package.json bun.lock* ./
 RUN bun install
 
 COPY . .
