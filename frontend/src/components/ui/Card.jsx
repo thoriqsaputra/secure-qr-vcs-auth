@@ -1,8 +1,15 @@
 import React from 'react';
 
-const Card = ({ children, className = '' }) => {
+const Card = ({ children, className = '', hover = false, gradient = false }) => {
   return (
-    <div className={`glass-panel rounded-xl p-6 border border-slate-700/50 ${className}`}>
+    <div
+      className={`
+        glass-card rounded-2xl p-6
+        ${hover ? 'hover-lift glass-hover cursor-pointer' : ''}
+        ${gradient ? 'border-gradient-hover' : 'border border-white/10'}
+        ${className}
+      `}
+    >
       {children}
     </div>
   );

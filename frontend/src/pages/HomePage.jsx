@@ -5,95 +5,56 @@ import Card from "../components/ui/Card";
 
 const HomePage = () => {
   return (
-    <div className="space-y-24 animate-fade-in">
-      {/* Hero Section */}
-      <section className="text-center space-y-8 py-16 relative">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold tracking-widest uppercase mb-4">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-          Next-Gen Authentication
-        </div>
-        <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-text-main">
-          Secure <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Visual Cryptography</span>
+    <div className="space-y-24 animate-fade-in-up">
+      {/* Hero Section with enhanced design */}
+      <section className="relative text-center space-y-8 py-12 sm:py-20">
+
+        {/* Main heading */}
+        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-text-main leading-tight animate-fade-in delay-100">
+          Secure <span className="text-gradient inline-block">Visual Cryptography</span><br />
+          <span className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-text-muted font-medium">for Event Tickets</span>
         </h1>
-        <p className="text-lg text-text-muted max-w-2xl mx-auto leading-relaxed">
-          Issue unforgeable tickets using 2-out-of-2 visual secret sharing. 
-          Combine physical and digital shares with OpenCV homography alignment for robust verification.
+
+        {/* Description */}
+        <p className="text-base sm:text-lg text-text-muted max-w-3xl mx-auto leading-relaxed px-4 animate-fade-in delay-200">
+          Prevent ticket fraud with{' '}
+          <span className="text-primary font-semibold">2-out-of-2 Visual Secret Sharing</span>.
+          ArUco marker alignment ensures{' '}
+          <span className="text-accent font-semibold">pixel-perfect reconstruction</span>{' '}
+          with rotation robustness at 0°, 90°, 180°, and 270°.
         </p>
-        <div className="flex justify-center gap-4 pt-8">
-          <Button to="/buy" size="lg" className="shadow-xl shadow-primary/20">Issue Ticket</Button>
-          <Button to="/verify" variant="secondary" size="lg">Verify Ticket</Button>
+
+        {/* CTA Buttons */}
+        <div className="flex flex-col sm:flex-row justify-center gap-4 pt-8 px-4 animate-fade-in delay-300">
+          <Button
+            to="/buy"
+            size="lg"
+            className="shadow-glow hover:scale-105"
+            icon={
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+              </svg>
+            }
+          >
+            Issue Ticket
+          </Button>
+          <Button
+            to="/verify"
+            variant="secondary"
+            size="lg"
+            className="hover:scale-105"
+            icon={
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            }
+          >
+            Verify Ticket
+          </Button>
         </div>
       </section>
 
-      {/* Features Grid */}
-      <section className="grid md:grid-cols-3 gap-8">
-        <Card className="space-y-4 hover:border-primary/50 transition-all duration-300 hover:-translate-y-1">
-          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">1</div>
-          <h3 className="text-xl font-semibold text-text-main">Generate & Split</h3>
-          <p className="text-text-muted text-sm leading-relaxed">
-            Create a QR payload with HMAC signature. The system splits it into two visual shares: one for the user, one for the server.
-          </p>
-        </Card>
-        <Card className="space-y-4 hover:border-primary/50 transition-all duration-300 hover:-translate-y-1">
-          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">2</div>
-          <h3 className="text-xl font-semibold text-text-main">Auto-Alignment</h3>
-          <p className="text-text-muted text-sm leading-relaxed">
-            Advanced OpenCV ORB feature matching and homography automatically aligns the user's uploaded share with the server's copy.
-          </p>
-        </Card>
-        <Card className="space-y-4 hover:border-primary/50 transition-all duration-300 hover:-translate-y-1">
-          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">3</div>
-          <h3 className="text-xl font-semibold text-text-main">Secure Verification</h3>
-          <p className="text-text-muted text-sm leading-relaxed">
-            Shares are stacked via XOR. The result is decoded and the digital signature is validated to prevent tampering and replay attacks.
-          </p>
-        </Card>
-      </section>
-
-      {/* Technical Details */}
-      <section className="grid md:grid-cols-2 gap-16 items-center">
-        <div className="space-y-8">
-          <h2 className="text-3xl font-bold text-text-main">How it works</h2>
-          <div className="space-y-4">
-            {[
-              "Payload generation with HMAC-SHA256 signature",
-              "2-out-of-2 Visual Cryptography Scheme (VCS) splitting",
-              "User receives Share A (PNG image)",
-              "Server stores Share B securely",
-              "Verification via image upload or camera capture",
-              "Real-time homography alignment and XOR stacking"
-            ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3 text-text-muted group">
-                <div className="w-1.5 h-1.5 rounded-full bg-primary group-hover:scale-150 transition-transform"></div>
-                {item}
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="relative group">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary to-accent blur-[100px] opacity-20 group-hover:opacity-30 transition-opacity"></div>
-          <Card className="relative border-slate-700/50 bg-surface/80 backdrop-blur-xl">
-            <div className="space-y-4 font-mono text-sm text-text-muted">
-              <div className="flex justify-between border-b border-slate-700/50 pb-3">
-                <span>Protocol</span>
-                <span className="text-primary">VCS-2-2</span>
-              </div>
-              <div className="flex justify-between border-b border-slate-700/50 pb-3">
-                <span>Encryption</span>
-                <span className="text-primary">AES-256</span>
-              </div>
-              <div className="flex justify-between border-b border-slate-700/50 pb-3">
-                <span>Alignment</span>
-                <span className="text-primary">ORB + RANSAC</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Signature</span>
-                <span className="text-primary">HMAC-SHA256</span>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </section>
+      
     </div>
   );
 };
